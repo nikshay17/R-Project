@@ -1,0 +1,3 @@
+setwd("C:/Users/LENOVO/Desktop/R-Project/RProject/speech-to-text-app/frontend")
+shiny::runApp()
+

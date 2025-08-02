@@ -1,0 +1,70 @@
+library(shiny)
+library(httr)
+library(jsonlite)
+library(tm)
+library(wordcloud)
+
+shinyServer(function(input, output) {
+  transcribedText <- reactiveVal("")
+  debugLogs <- reactiveVal("Debug logs will appear here...\n")
+  
+  observeEvent(input$transcribeBtn, {
+    req(input$audioFile)
+    
+    # Log file info
+    debugLogs(paste0(debugLogs(), "File selected: ", input$audioFile$name, "\n"))
+    debugLogs(paste0(debugLogs(), "File path: ", input$audioFile$datapath, "\n"))
+    
+    tryCatch({
+      # Send file to Flask
+      res <- POST(
+        "http://127.0.0.1:5000/upload",
+        body = list(file = upload_file(input$audioFile$datapath)),
+        encode = "multipart"
+      )
+      
+      # Log HTTP status
+      debugLogs(paste0(debugLogs(), "HTTP Status: ", status_code(res), "\n"))
+      
+      if (status_code(res) == 200) {
+        # UNIVERSAL SOLUTION: Handle all versions of httr
+        text_data <- rawToChar(res$content)
+        debugLogs(paste0(debugLogs(), "Raw Flask response: ", text_data, "\n"))
+        
+        parsed_data <- fromJSON(text_data)
+        if (!is.null(parsed_data$transcription)) {
+          transcribedText(parsed_data$transcription)
+        } else {
+          debugLogs(paste0(debugLogs(), "Error: No 'transcription' field in response\n"))
+          showNotification("Flask response missing transcription field", type = "error")
+        }
+      } else {
+        error_msg <- rawToChar(res$content)
+        debugLogs(paste0(debugLogs(), "Error: ", error_msg, "\n"))
+        showNotification("Flask returned an error", type = "error")
+      }
+    }, error = function(e) {
+      debugLogs(paste0(debugLogs(), "Critical error: ", e$message, "\n"))
+      showNotification(paste("Failed to process request:", e$message), type = "error")
+    })
+  })
+  
+  # Outputs
+  output$transcribedText <- renderText({
+    transcribedText()
+  })
+  
+  output$wordcloud <- renderPlot({
+    req(transcribedText())
+    # ... (your existing wordcloud code)
+  })
+  
+  output$wordFreq <- renderTable({
+    req(transcribedText())
+    # ... (your existing word frequency code)
+  })
+  
+  output$debugLogs <- renderText({
+    debugLogs()
+  })
+})

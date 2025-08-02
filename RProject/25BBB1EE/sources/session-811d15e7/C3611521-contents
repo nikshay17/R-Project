@@ -1,0 +1,19 @@
+library(shiny)
+
+shinyUI(fluidPage(
+  titlePanel("Speech-to-Text Analyzer"),
+  sidebarLayout(
+    sidebarPanel(
+      fileInput("audioFile", "Upload Audio File", accept = c(".wav", ".mp3")),
+      actionButton("transcribeBtn", "Convert to Text"),
+      textOutput("transcribedText")
+    ),
+    mainPanel(
+      h3("Text Analysis"),
+      plotOutput("wordcloud"),
+      tableOutput("wordFreq"),
+      h4("Debug Logs"),  # New section for debug output
+      verbatimTextOutput("debugLogs")  # Displays debug messages
+    )
+  )
+))
